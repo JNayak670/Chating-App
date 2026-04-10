@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat App</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="login">
+    <div class="box">
+        <h2>🚀 Chat App</h2>
+        <input id="name" placeholder="Enter name">
+        <input id="phone" placeholder="Enter phone">
+        <button onclick="login()">Login</button>
+    </div>
+</div>
+
+<!-- CHAT -->
+<div id="app" style="display:none;">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <h2>Chats</h2>
+
+        <button onclick="createGroup()">+ Group</button>
+        <button onclick="joinGroup()">Join</button>
+
+        <div id="chatList"></div>
+    </div>
+
+    <!-- CHAT AREA -->
+    <div class="chat">
+
+        <div class="header" id="chatHeader">
+            Select Chat
+        </div>
+
+        <div id="messages"></div>
+        <div id="typing"></div>
+
+        <div class="input">
+            <input id="msg" placeholder="Type message...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+
+    </div>
+</div>
+
+<script src="http://localhost:3000/socket.io/socket.io.js"></script>
+<script src="js/script.js"></script>
+
+</body>
+</html>
