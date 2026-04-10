@@ -7,56 +7,39 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 
-// MODELS
 const Message = require("./models/Message");
 const Chat = require("./models/Chat");
+const User = require("./models/User");
 
-// INIT
 const app = express();
 const server = http.createServer(app);
 
-// SOCKET.IO
 const io = new Server(server, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-    }
+    cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
-// =======================
-// 🔐 SOCKET AUTH (JWT)
-// =======================
+// SOCKET AUTH
 io.use((socket, next) => {
     try {
         const token = socket.handshake.auth.token;
-
         if (!token) return next(new Error("No token"));
-
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         socket.userId = decoded.id;
-
         next();
     } catch (err) {
-        next(new Error("Authentication error"));
+        next(new Error("Auth error"));
     }
 });
 
-// =======================
-// 🧱 MIDDLEWARE
-// =======================
 app.use(cors());
 app.use(express.json());
 
-// =======================
-// 📦 DATABASE
-// =======================
+// DATABASE
 mongoose.connect(process.env.MONGO_URI)
-.then(() => console.log("✅ MongoDB Connected"))
-.catch(err => console.log("❌ DB Error:", err));
+    .then(() => console.log("✅ MongoDB Connected"))
+    .catch(err => console.log("❌ DB Error:", err));
 
-// =======================
-// 📡 ROUTES
-// =======================
+// ROUTES
 const authRoutes = require("./routes/authRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const messageRoutes = require("./routes/messageRoutes");
@@ -65,121 +48,95 @@ app.use("/", authRoutes);
 app.use("/", chatRoutes);
 app.use("/", messageRoutes);
 
-// TEST ROUTE
-app.get("/", (req, res) => {
-    res.send("🚀 Server running...");
-});
+// AUTO-DELETE EXPIRED MESSAGES EVERY MINUTE
+const DELETE_AFTER_MS = 10 * 60 * 1000;
 
-// =======================
-// 🟢 ONLINE USERS
-// =======================
+setInterval(async () => {
+    try {
+        const cutoff = new Date(Date.now() - DELETE_AFTER_MS);
+        const result = await Message.deleteMany({ createdAt: { $lt: cutoff } });
+        if (result.deletedCount > 0) {
+            console.log("Deleted " + result.deletedCount + " expired messages");
+        }
+    } catch (err) {
+        console.log("Cleanup error:", err.message);
+    }
+}, 60 * 1000);
+
 let onlineUsers = new Set();
 
-// =======================
-// 💬 SOCKET LOGIC
-// =======================
 io.on("connection", (socket) => {
     const userId = socket.userId;
-
-    console.log("🟢 Connected:", userId);
-
-    // JOIN USER ROOM
+    console.log("Connected:", userId);
     socket.join(userId);
-
-    // ADD ONLINE
     onlineUsers.add(userId);
     io.emit("online_users", Array.from(onlineUsers));
 
-    // =========================
-    // 📩 SEND MESSAGE
-    // =========================
+    // SEND MESSAGE
     socket.on("send_message", async (data) => {
         try {
+            const sender = await User.findById(userId).lean();
             const msg = await Message.create({
                 chatId: data.chatId,
                 senderId: userId,
                 text: data.text,
                 status: "sent"
             });
-
             const chat = await Chat.findById(data.chatId);
-
-            // SEND TO ALL MEMBERS
+            if (!chat) return;
+            const msgObj = msg.toObject();
+            msgObj._sName = sender ? sender.name : "";
             chat.members.forEach(memberId => {
-                io.to(memberId.toString()).emit("receive_message", msg);
+                io.to(memberId.toString()).emit("receive_message", msgObj);
             });
-
         } catch (err) {
-            console.log("❌ Send error:", err);
+            console.log("Send error:", err.message);
         }
     });
 
-    // =========================
-    // ✔ DELIVERED
-    // =========================
+    // DELIVERED
     socket.on("message_delivered", async ({ messageId }) => {
-        const msg = await Message.findById(messageId);
-
-        if (msg && msg.status === "sent") {
-            msg.status = "delivered";
-            await msg.save();
-
-            io.emit("message_updated", msg);
-        }
+        try {
+            const msg = await Message.findById(messageId);
+            if (msg && msg.status === "sent") {
+                msg.status = "delivered";
+                await msg.save();
+                io.emit("message_updated", msg);
+            }
+        } catch (err) {}
     });
 
-    // =========================
-    // 👁️ SEEN (GROUP LOGIC)
-    // =========================
+    // SEEN
     socket.on("message_seen", async ({ messageId }) => {
         try {
             const msg = await Message.findById(messageId);
             if (!msg) return;
-
             const chat = await Chat.findById(msg.chatId);
-
-            // ADD USER TO seenBy
-            if (!msg.seenBy.includes(userId)) {
+            if (!chat) return;
+            if (!msg.seenBy.map(String).includes(String(userId))) {
                 msg.seenBy.push(userId);
             }
-
-            // IF ALL MEMBERS SEEN
-            if (msg.seenBy.length === chat.members.length) {
+            if (msg.seenBy.length >= chat.members.length) {
                 msg.status = "seen";
             }
-
             await msg.save();
-
             io.emit("message_updated", msg);
-
-        } catch (err) {
-            console.log("❌ Seen error:", err);
-        }
+        } catch (err) {}
     });
 
-    // =========================
-    // ⌨️ TYPING
-    // =========================
-    socket.on("typing", (chatId) => {
-        socket.broadcast.emit("typing", chatId);
+    // TYPING (includes chatId and name for proper filtering)
+    socket.on("typing", ({ chatId, name }) => {
+        socket.broadcast.emit("typing", { chatId, name });
     });
 
-    // =========================
-    // 🔴 DISCONNECT
-    // =========================
+    // DISCONNECT
     socket.on("disconnect", () => {
-        console.log("🔴 Disconnected:", userId);
-
         onlineUsers.delete(userId);
         io.emit("online_users", Array.from(onlineUsers));
     });
 });
 
-// =======================
-// 🚀 START SERVER
-// =======================
 const PORT = process.env.PORT || 3000;
-
 server.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log("Server on http://localhost:" + PORT);
 });

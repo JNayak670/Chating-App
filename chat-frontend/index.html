@@ -1,56 +1,545 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Chat App</title>
-    <link rel="stylesheet" href="css/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
-</head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>✨ ChatFlow</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080812;
+    --surface: #0f0f20;
+    --surface2: #16162a;
+    --border: rgba(255,255,255,0.07);
+    --a1: #7c3aed;
+    --a2: #ec4899;
+    --a3: #06b6d4;
+    --a4: #10b981;
+    --text: #f1f5f9;
+    --muted: #64748b;
+    --online: #10b981;
+    --r: 18px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;overflow:hidden;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;}
 
+  /* Noise */
+  body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;}
+
+  /* Orbs */
+  .orbs{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
+  .orb{position:absolute;border-radius:50%;filter:blur(90px);opacity:0.12;animation:drift 18s ease-in-out infinite alternate;}
+  .o1{width:600px;height:600px;background:var(--a1);top:-250px;left:-200px;animation-delay:0s;}
+  .o2{width:450px;height:450px;background:var(--a2);bottom:-200px;right:-100px;animation-delay:-8s;}
+  .o3{width:350px;height:350px;background:var(--a3);top:40%;left:35%;animation-delay:-15s;}
+  @keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(50px,30px) scale(1.12)}}
+
+  .screen{position:relative;z-index:1;width:100%;height:100%;display:flex;align-items:center;justify-content:center;}
+  .hidden{display:none!important;}
+
+  /* ── LOGIN ── */
+  .card{background:rgba(15,15,32,0.9);backdrop-filter:blur(30px);border:1px solid var(--border);border-radius:28px;padding:52px 44px;width:390px;text-align:center;box-shadow:0 40px 80px rgba(0,0,0,0.6),0 0 0 1px rgba(124,58,237,0.08);animation:su .6s cubic-bezier(.16,1,.3,1) both;}
+  @keyframes su{from{opacity:0;transform:translateY(32px)}to{opacity:1;transform:translateY(0)}}
+  .logo{width:72px;height:72px;background:linear-gradient(135deg,var(--a1),var(--a2));border-radius:22px;display:flex;align-items:center;justify-content:center;font-size:34px;margin:0 auto 24px;box-shadow:0 10px 40px rgba(124,58,237,0.45);}
+  .card-title{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;margin-bottom:6px;background:linear-gradient(135deg,#fff,#c4b5fd);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  .card-sub{color:var(--muted);font-size:14px;margin-bottom:34px;}
+  .f-group{margin-bottom:16px;text-align:left;}
+  .f-label{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:6px;letter-spacing:.06em;text-transform:uppercase;display:block;}
+  .field{width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:13px;padding:14px 16px;color:var(--text);font-size:15px;font-family:inherit;outline:none;transition:border-color .2s,box-shadow .2s;}
+  .field:focus{border-color:var(--a1);box-shadow:0 0 0 3px rgba(124,58,237,0.18);}
+  .field::placeholder{color:var(--muted);}
+  .btn-lg{width:100%;padding:16px;border-radius:14px;border:none;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .2s;background:linear-gradient(135deg,var(--a1),var(--a2));color:white;box-shadow:0 6px 28px rgba(124,58,237,0.45);margin-top:8px;letter-spacing:.03em;}
+  .btn-lg:hover{transform:translateY(-2px);box-shadow:0 10px 36px rgba(124,58,237,0.55);}
+  .btn-lg:active{transform:translateY(0);}
+
+  /* ── APP ── */
+  #app{position:relative;z-index:1;display:flex;width:100%;height:100%;padding:12px;gap:12px;}
+
+  /* ── SIDEBAR ── */
+  .sidebar{width:310px;flex-shrink:0;background:rgba(15,15,32,0.85);backdrop-filter:blur(24px);border:1px solid var(--border);border-radius:var(--r);display:flex;flex-direction:column;overflow:hidden;}
+  .sb-head{padding:18px 16px 14px;border-bottom:1px solid var(--border);}
+  .sb-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .sb-title{font-family:'Syne',sans-serif;font-size:19px;font-weight:800;background:linear-gradient(135deg,#fff,#c4b5fd);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  .my-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--a1),var(--a2));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;font-family:'Syne',sans-serif;cursor:pointer;flex-shrink:0;}
+  .sb-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:12px;}
+  .ab{padding:9px 4px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:11px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:4px;white-space:nowrap;}
+  .ab:hover{background:rgba(124,58,237,0.14);border-color:rgba(124,58,237,0.4);color:#c4b5fd;}
+  .ab.dm:hover{background:rgba(6,182,212,0.1);border-color:rgba(6,182,212,0.4);color:#67e8f9;}
+  .ab.join:hover{background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.4);color:#6ee7b7;}
+  .srch-wrap{position:relative;}
+  .srch-ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none;color:var(--muted);}
+  .srch{padding-left:34px;}
+  .tabs{display:flex;border-bottom:1px solid var(--border);}
+  .tab{flex:1;padding:10px 0;text-align:center;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;}
+  .tab.active{color:var(--a1);border-bottom-color:var(--a1);}
+  .clist{flex:1;overflow-y:auto;padding:6px;}
+  .clist::-webkit-scrollbar{width:3px;}
+  .clist::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.07);border-radius:2px;}
+  .empty{padding:40px 20px;text-align:center;color:var(--muted);font-size:13px;}
+  .empty-ico{font-size:38px;margin-bottom:10px;}
+  .ci{display:flex;align-items:center;gap:11px;padding:11px;border-radius:12px;cursor:pointer;transition:all .15s;margin-bottom:3px;}
+  .ci:hover{background:rgba(255,255,255,0.04);}
+  .ci.active{background:rgba(124,58,237,0.13);border:1px solid rgba(124,58,237,0.22);}
+  .ci-av{width:44px;height:44px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;font-family:'Syne',sans-serif;position:relative;}
+  .od{position:absolute;bottom:1px;right:1px;width:11px;height:11px;border-radius:50%;background:var(--online);border:2px solid var(--surface);display:none;}
+  .od.on{display:block;}
+  .ci-inf{flex:1;min-width:0;}
+  .ci-name{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .ci-prev{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;}
+  .ci-meta{text-align:right;flex-shrink:0;}
+  .ci-time{font-size:11px;color:var(--muted);}
+
+  /* ── MAIN ── */
+  .main{flex:1;background:rgba(15,15,32,0.75);backdrop-filter:blur(24px);border:1px solid var(--border);border-radius:var(--r);display:flex;flex-direction:column;overflow:hidden;}
+  .ph{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);text-align:center;padding:40px;}
+  .ph-ico{font-size:68px;margin-bottom:20px;}
+  .ph h3{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--text);margin-bottom:8px;}
+  .ph p{font-size:14px;line-height:1.7;}
+  #chatView{display:flex;flex-direction:column;flex:1;overflow:hidden;}
+  .ch-head{display:flex;align-items:center;gap:14px;padding:15px 20px;border-bottom:1px solid var(--border);}
+  .ch-av{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;font-family:'Syne',sans-serif;flex-shrink:0;}
+  .ch-inf{flex:1;}
+  .ch-name{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;}
+  .ch-sub{font-size:12px;color:var(--muted);margin-top:2px;}
+  .ch-acts{display:flex;gap:8px;}
+  .ib{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--muted);font-size:15px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;}
+  .ib:hover{background:rgba(255,255,255,0.08);color:var(--text);}
+  .del-banner{display:flex;align-items:center;justify-content:center;gap:6px;padding:7px 20px;background:rgba(239,68,68,0.07);border-bottom:1px solid rgba(239,68,68,0.12);font-size:12px;color:#f87171;}
+
+  /* Messages */
+  .msgs{flex:1;overflow-y:auto;padding:18px 20px;display:flex;flex-direction:column;gap:4px;}
+  .msgs::-webkit-scrollbar{width:3px;}
+  .msgs::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:2px;}
+  .datediv{text-align:center;margin:12px 0;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:10px;}
+  .datediv::before,.datediv::after{content:'';flex:1;height:1px;background:var(--border);}
+  .mrow{display:flex;align-items:flex-end;gap:8px;}
+  .mrow.s{flex-direction:row-reverse;}
+  .sm-av{width:27px;height:27px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;}
+  .bwrap{max-width:62%;display:flex;flex-direction:column;}
+  .mrow.s .bwrap{align-items:flex-end;}
+  .sname{font-size:11px;color:var(--muted);margin-bottom:3px;padding-left:2px;}
+  .bbl{padding:11px 15px;border-radius:18px;font-size:14px;line-height:1.5;word-break:break-word;animation:pop .25s cubic-bezier(.34,1.56,.64,1) both;}
+  @keyframes pop{from{opacity:0;transform:scale(0.86)}to{opacity:1;transform:scale(1)}}
+  .bbl.s{background:linear-gradient(135deg,var(--a1),var(--a2));color:white;border-bottom-right-radius:5px;box-shadow:0 4px 18px rgba(124,58,237,0.32);}
+  .bbl.r{background:rgba(255,255,255,0.07);border:1px solid var(--border);color:var(--text);border-bottom-left-radius:5px;}
+  .mmeta{display:flex;align-items:center;gap:5px;margin-top:4px;}
+  .mt{font-size:10px;color:var(--muted);}
+  .ms{font-size:11px;}
+  .ms.si{color:#a78bfa;}.ms.di{color:#67e8f9;}.ms.sei{color:#34d399;}
+  .mcd{font-size:10px;color:#f87171;}
+
+  /* Typing */
+  .typ-row{display:flex;align-items:center;gap:8px;padding:3px 20px;min-height:26px;}
+  .typ-ind{display:flex;gap:4px;align-items:center;}
+  .td{width:6px;height:6px;border-radius:50%;background:var(--a3);animation:tb 1.2s ease-in-out infinite;}
+  .td:nth-child(2){animation-delay:.2s;}.td:nth-child(3){animation-delay:.4s;}
+  @keyframes tb{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
+  .tt{font-size:12px;color:var(--muted);}
+
+  /* Input */
+  .inp-area{padding:14px 18px;border-top:1px solid var(--border);display:flex;align-items:flex-end;gap:10px;}
+  .mi{flex:1;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:16px;padding:13px 16px;color:var(--text);font-size:14px;font-family:inherit;outline:none;resize:none;transition:border-color .2s,box-shadow .2s;max-height:120px;overflow-y:auto;line-height:1.4;}
+  .mi:focus{border-color:rgba(124,58,237,0.42);box-shadow:0 0 0 3px rgba(124,58,237,0.12);}
+  .mi::placeholder{color:var(--muted);}
+  .sbtn{width:48px;height:48px;border-radius:14px;border:none;background:linear-gradient(135deg,var(--a1),var(--a2));color:white;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;box-shadow:0 4px 18px rgba(124,58,237,0.42);}
+  .sbtn:hover{transform:scale(1.08);box-shadow:0 6px 26px rgba(124,58,237,0.55);}
+  .sbtn:active{transform:scale(0.96);}
+
+  /* Modal */
+  .ov{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;}
+  .ov.open{opacity:1;pointer-events:all;}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:36px;width:380px;max-width:90vw;box-shadow:0 40px 80px rgba(0,0,0,0.65);transform:translateY(22px);transition:transform .3s cubic-bezier(.16,1,.3,1);}
+  .ov.open .modal{transform:translateY(0);}
+  .m-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:5px;}
+  .m-sub{color:var(--muted);font-size:13px;margin-bottom:22px;}
+  .m-acts{display:flex;gap:10px;margin-top:18px;}
+  .bcn{flex:1;padding:13px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:12px;color:var(--muted);font-family:inherit;font-size:14px;cursor:pointer;transition:all .2s;}
+  .bcn:hover{background:rgba(255,255,255,0.09);}
+  .bcf{flex:2;padding:13px;border-radius:12px;border:none;cursor:pointer;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;transition:all .2s;color:white;}
+  .bcf.p{background:linear-gradient(135deg,var(--a1),var(--a2));box-shadow:0 4px 18px rgba(124,58,237,0.35);}
+  .bcf.c{background:linear-gradient(135deg,var(--a3),var(--a4));box-shadow:0 4px 18px rgba(6,182,212,0.35);}
+  .bcf:hover{transform:translateY(-1px);}
+  .code-box{background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.3);border-radius:14px;padding:20px;text-align:center;font-family:'Syne',sans-serif;font-size:36px;font-weight:800;color:#c4b5fd;letter-spacing:.18em;margin:16px 0;cursor:pointer;}
+  .code-box:hover{background:rgba(124,58,237,0.18);}
+
+  /* Toast */
+  .tw{position:fixed;bottom:22px;right:22px;z-index:200;display:flex;flex-direction:column;gap:8px;}
+  .toast{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:11px 18px;font-size:13px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,0.45);animation:tin .3s ease both;max-width:290px;}
+  @keyframes tin{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:translateX(0)}}
+  .toast.s{border-color:rgba(16,185,129,0.4);}
+  .toast.e{border-color:rgba(239,68,68,0.4);}
+  .toast.i{border-color:rgba(124,58,237,0.4);}
+
+  /* gradient helpers */
+  .g1{background:linear-gradient(135deg,#7c3aed,#ec4899);}
+  .g2{background:linear-gradient(135deg,#06b6d4,#10b981);}
+  .g3{background:linear-gradient(135deg,#f59e0b,#ef4444);}
+  .g4{background:linear-gradient(135deg,#8b5cf6,#06b6d4);}
+  .g5{background:linear-gradient(135deg,#ec4899,#f59e0b);}
+</style>
+</head>
 <body>
+<div class="orbs"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
 
 <!-- LOGIN -->
-<div id="login">
-    <div class="box">
-        <h2>🚀 Chat App</h2>
-        <input id="name" placeholder="Enter name">
-        <input id="phone" placeholder="Enter phone">
-        <button onclick="login()">Login</button>
-    </div>
+<div id="loginScreen" class="screen">
+  <div class="card">
+    <div class="logo">💬</div>
+    <h1 class="card-title">ChatFlow</h1>
+    <p class="card-sub">Group chats & private messages — gone in 10 min 🔥</p>
+    <div class="f-group"><label class="f-label">Your Name</label><input class="field" id="lName" placeholder="e.g. Priya Sharma" autocomplete="off"></div>
+    <div class="f-group"><label class="f-label">Phone Number</label><input class="field" id="lPhone" placeholder="+91 98765 43210" type="tel" autocomplete="off"></div>
+    <button class="btn-lg" onclick="doLogin()">Enter ChatFlow →</button>
+  </div>
 </div>
 
-<!-- CHAT -->
-<div id="app" style="display:none;">
-
-    <!-- SIDEBAR -->
-    <div class="sidebar">
-        <h2>Chats</h2>
-
-        <button onclick="createGroup()">+ Group</button>
-        <button onclick="joinGroup()">Join</button>
-
-        <div id="chatList"></div>
+<!-- APP -->
+<div id="app" class="screen hidden">
+  <div class="sidebar">
+    <div class="sb-head">
+      <div class="sb-top">
+        <span class="sb-title">ChatFlow</span>
+        <div class="my-av" id="myAv" title="You">?</div>
+      </div>
+      <div class="sb-actions">
+        <button class="ab dm" onclick="openDM()">💬 New DM</button>
+        <button class="ab" onclick="openCreate()">👥 Group</button>
+        <button class="ab join" onclick="openJoin()">🔗 Join</button>
+      </div>
+      <div class="srch-wrap">
+        <span class="srch-ico">🔍</span>
+        <input class="field srch" id="srch" placeholder="Search chats…" oninput="renderList()">
+      </div>
     </div>
-
-    <!-- CHAT AREA -->
-    <div class="chat">
-
-        <div class="header" id="chatHeader">
-            Select Chat
-        </div>
-
-        <div id="messages"></div>
-        <div id="typing"></div>
-
-        <div class="input">
-            <input id="msg" placeholder="Type message...">
-            <button onclick="sendMessage()">Send</button>
-        </div>
-
+    <div class="tabs">
+      <div class="tab active" onclick="setTab('all',this)">All</div>
+      <div class="tab" onclick="setTab('dm',this)">DMs</div>
+      <div class="tab" onclick="setTab('group',this)">Groups</div>
     </div>
+    <div class="clist" id="clist"><div class="empty"><div class="empty-ico">✨</div>Start a chat or join a group!</div></div>
+  </div>
+
+  <div class="main">
+    <div class="ph" id="ph">
+      <div class="ph-ico">🌌</div>
+      <h3>Pick a Conversation</h3>
+      <p>Start a DM, create a group, or join<br>one with a code on the left.</p>
+    </div>
+    <div id="chatView" class="hidden">
+      <div class="ch-head">
+        <div class="ch-av" id="chAv">?</div>
+        <div class="ch-inf"><div class="ch-name" id="chName">–</div><div class="ch-sub" id="chSub">–</div></div>
+        <div class="ch-acts"><button class="ib" onclick="showInfo()">ℹ️</button></div>
+      </div>
+      <div class="del-banner">🔥 All messages auto-delete <strong>10 minutes</strong> after being sent</div>
+      <div class="msgs" id="msgs"></div>
+      <div class="typ-row">
+        <div class="typ-ind hidden" id="typInd"><div class="td"></div><div class="td"></div><div class="td"></div></div>
+        <span class="tt" id="typTxt"></span>
+      </div>
+      <div class="inp-area">
+        <textarea class="mi" id="mi" placeholder="Type a message…" rows="1" onkeydown="mkd(event)" oninput="mtyp()"></textarea>
+        <button class="sbtn" onclick="send()">➤</button>
+      </div>
+    </div>
+  </div>
 </div>
+
+<!-- MODALS -->
+<div class="ov" id="ov" onclick="mclose(event)">
+  <div class="modal hidden" id="mCreate">
+    <div class="m-title">👥 Create Group</div><div class="m-sub">Give your group a name</div>
+    <div class="f-group"><label class="f-label">Group Name</label><input class="field" id="gName" placeholder="e.g. Design Team"></div>
+    <div class="m-acts"><button class="bcn" onclick="mhide()">Cancel</button><button class="bcf p" onclick="doCreate()">Create</button></div>
+  </div>
+  <div class="modal hidden" id="mCode">
+    <div class="m-title">🎉 Group Created!</div><div class="m-sub">Share this code to invite friends</div>
+    <div class="code-box" id="codeBox" onclick="copyCode()">—</div>
+    <p style="font-size:12px;color:var(--muted);text-align:center;">Tap to copy</p>
+    <div class="m-acts"><button class="bcf p" style="flex:1" onclick="copyCode()">📋 Copy</button><button class="bcn" onclick="mhide()">Done</button></div>
+  </div>
+  <div class="modal hidden" id="mJoin">
+    <div class="m-title">🔗 Join Group</div><div class="m-sub">Enter the 4-digit invite code</div>
+    <div class="f-group"><label class="f-label">Group Code</label><input class="field" id="jCode" placeholder="1234" maxlength="4" style="text-align:center;font-size:30px;font-family:'Syne',sans-serif;letter-spacing:.1em;"></div>
+    <div class="m-acts"><button class="bcn" onclick="mhide()">Cancel</button><button class="bcf c" onclick="doJoin()">Join</button></div>
+  </div>
+  <div class="modal hidden" id="mDM">
+    <div class="m-title">💬 New Direct Message</div><div class="m-sub">Enter the person's phone number</div>
+    <div class="f-group"><label class="f-label">Their Phone</label><input class="field" id="dmPhone" placeholder="+91 98765 43210" type="tel"></div>
+    <div class="m-acts"><button class="bcn" onclick="mhide()">Cancel</button><button class="bcf p" onclick="doDM()">Start Chat</button></div>
+  </div>
+  <div class="modal hidden" id="mInfo">
+    <div class="m-title" id="infT">Info</div>
+    <div id="infB" style="color:var(--muted);font-size:13px;line-height:1.9;margin-bottom:12px;"></div>
+    <div class="m-acts"><button class="bcf p" style="flex:1" onclick="mhide()">Close</button></div>
+  </div>
+</div>
+<div class="tw" id="tw"></div>
 
 <script src="http://localhost:3000/socket.io/socket.io.js"></script>
-<script src="js/script.js"></script>
+<script>
+const API='http://localhost:3000';
+const DEL_MS=10*60*1000;
+let socket,userId,token,me,myChats=[],curChat=null,tab='all',lastCode='',typTout=null;
+let onlineU=new Set();
 
+// ─── helpers ───
+const $=id=>document.getElementById(id);
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function ini(n='?'){return (n||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();}
+const GS=['g1','g2','g3','g4','g5'];
+function grd(id){const h=(id||'').split('').reduce((a,c)=>a+c.charCodeAt(0),0);return GS[h%GS.length];}
+function fmtT(d){return new Date(d).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});}
+function cd(c){const r=DEL_MS-(Date.now()-new Date(c).getTime());if(r<=0)return'deleted';const m=Math.floor(r/60000),s=Math.floor((r%60000)/1000);return`${m}:${s.toString().padStart(2,'0')}`;}
+function toast(msg,t='i'){const el=document.createElement('div');el.className=`toast ${t}`;const ic={i:'💜',s:'✅',e:'❌'};el.innerHTML=`<span>${ic[t]||'💬'}</span><span>${esc(msg)}</span>`;$('tw').appendChild(el);setTimeout(()=>el.remove(),4000);}
+function scrollB(){const m=$('msgs');m.scrollTop=m.scrollHeight;}
+
+// ─── LOGIN ───
+async function doLogin(){
+  const name=$('lName').value.trim(),phone=$('lPhone').value.trim();
+  if(!name||!phone)return toast('Name and phone required','e');
+  try{
+    const r=await fetch(`${API}/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,phone})});
+    const d=await r.json();
+    userId=d.user._id;token=d.token;me=d.user.name;
+    $('myAv').textContent=ini(me);
+    initSocket();
+    $('loginScreen').classList.add('hidden');
+    $('app').classList.remove('hidden');
+    toast(`Welcome, ${me}! 👋`,'s');
+  }catch(e){toast('Login failed — is the server running?','e');}
+}
+$('lPhone').onkeydown=e=>{if(e.key==='Enter')doLogin();};
+
+// ─── SOCKET ───
+function initSocket(){
+  socket=io(API,{auth:{token}});
+  socket.on('connect',()=>console.log('✅ Socket'));
+  socket.on('connect_error',e=>toast('Socket error: '+e.message,'e'));
+
+  socket.on('receive_message',msg=>{
+    if(msg.chatId===curChat?._id){
+      dispMsg(msg,true);
+      socket.emit('message_seen',{messageId:msg._id});
+    } else {
+      const c=myChats.find(x=>x._id===msg.chatId);
+      if(c){c._last=msg.text;c._lt=msg.createdAt;renderList();}
+      toast('New message 💬','i');
+    }
+    socket.emit('message_delivered',{messageId:msg._id});
+    schedDel(msg);
+  });
+
+  socket.on('message_updated',msg=>{
+    const el=document.querySelector(`[data-mid="${msg._id}"] .ms`);
+    if(el){el.textContent=stIco(msg.status);el.className='ms '+stCls(msg.status);}
+  });
+
+  socket.on('online_users',list=>{
+    onlineU=new Set(list);
+    renderList();
+    if(curChat&&!curChat.isGroup){
+      const oid=curChat._otherId;
+      $('chSub').textContent=oid&&onlineU.has(oid)?'🟢 Online':'Offline';
+    }
+  });
+
+  socket.on('typing',({chatId,name})=>{
+    if(chatId!==curChat?._id)return;
+    $('typInd').classList.remove('hidden');
+    $('typTxt').textContent=`${name} is typing…`;
+    clearTimeout(typTout);
+    typTout=setTimeout(()=>{$('typInd').classList.add('hidden');$('typTxt').textContent='';},2200);
+  });
+}
+
+function stIco(s){if(s==='sent')return'✓';if(s==='delivered')return'✓✓';if(s==='seen')return'✓✓';return'';}
+function stCls(s){if(s==='sent')return'si';if(s==='delivered')return'di';if(s==='seen')return'sei';return'';}
+
+// ─── CHAT LIST ───
+function addChat(chat,go=false){
+  const ex=myChats.find(c=>c._id===chat._id);
+  if(!ex)myChats.push(chat);else Object.assign(ex,chat);
+  renderList();
+  if(go)selChat(myChats.find(c=>c._id===chat._id)||chat);
+}
+
+function renderList(){
+  const q=$('srch').value.toLowerCase();
+  const filtered=myChats.filter(c=>{
+    const n=(c.isGroup?c.name:c._oName||c.name||'').toLowerCase();
+    if(!n.includes(q))return false;
+    if(tab==='dm')return!c.isGroup;
+    if(tab==='group')return c.isGroup;
+    return true;
+  });
+  const cl=$('clist');
+  if(!filtered.length){cl.innerHTML=`<div class="empty"><div class="empty-ico">${tab==='group'?'👥':tab==='dm'?'💬':'✨'}</div><div>No chats yet</div></div>`;return;}
+  cl.innerHTML='';
+  filtered.forEach(c=>{
+    const dname=c.isGroup?c.name:(c._oName||'DM');
+    const g=grd(c._id);
+    const isOn=!c.isGroup&&c._otherId&&onlineU.has(c._otherId);
+    const d=document.createElement('div');
+    d.className='ci'+(c._id===curChat?._id?' active':'');
+    d.onclick=()=>selChat(c);
+    d.innerHTML=`
+      <div class="ci-av ${g}">${c.isGroup?'👥':ini(dname)}<div class="od${isOn?' on':''}"></div></div>
+      <div class="ci-inf">
+        <div class="ci-name">${esc(dname)}${c.isGroup?` <span style="font-size:10px;color:var(--muted);font-weight:400;">#${c.groupCode}</span>`:''}</div>
+        <div class="ci-prev">${esc(c._last||'')}</div>
+      </div>
+      <div class="ci-meta"><div class="ci-time">${c._lt?fmtT(c._lt):''}</div></div>`;
+    cl.appendChild(d);
+  });
+}
+
+function setTab(t,el){tab=t;document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));el.classList.add('active');renderList();}
+
+// ─── SELECT CHAT ───
+async function selChat(chat){
+  curChat=chat;
+  $('ph').classList.add('hidden');
+  const cv=$('chatView');cv.classList.remove('hidden');cv.style.display='flex';cv.style.flexDirection='column';cv.style.flex='1';cv.style.overflow='hidden';
+
+  const dname=chat.isGroup?chat.name:(chat._oName||'DM');
+  const g=grd(chat._id);
+  $('chAv').className=`ch-av ${g}`;
+  $('chAv').textContent=chat.isGroup?'👥':ini(dname);
+  $('chName').textContent=dname;
+  $('chSub').textContent=chat.isGroup?`${(chat.members||[]).length} members · #${chat.groupCode}`:(chat._otherId&&onlineU.has(chat._otherId)?'🟢 Online':'Offline');
+  renderList();
+  $('msgs').innerHTML='';
+  try{
+    const r=await fetch(`${API}/messages/${chat._id}`);
+    const msgs=await r.json();
+    msgs.forEach(m=>dispMsg(m,false));
+    if(msgs.length)socket.emit('message_seen',{messageId:msgs[msgs.length-1]._id});
+    scrollB();
+  }catch(e){toast('Could not load messages','e');}
+  $('mi').focus();
+}
+
+// ─── DISPLAY MSG ───
+function dispMsg(msg,scroll=true){
+  const el=Date.now()-new Date(msg.createdAt).getTime();
+  if(el>=DEL_MS)return;
+  const isSent=msg.senderId===userId;
+  const row=document.createElement('div');
+  row.className=`mrow${isSent?' s':''}`;
+  row.setAttribute('data-mid',msg._id);
+  row.setAttribute('data-ca',msg.createdAt);
+  const g=grd(msg.senderId||'0');
+  const sn=msg._sName||'';
+  const cdv=cd(msg.createdAt);
+  if(isSent){
+    row.innerHTML=`<div class="bwrap"><div class="bbl s">${esc(msg.text)}</div><div class="mmeta"><span class="mt">${fmtT(msg.createdAt)}</span><span class="ms ${stCls(msg.status)}">${stIco(msg.status)}</span><span class="mcd">🔥 ${cdv}</span></div></div>`;
+  } else {
+    row.innerHTML=`<div class="sm-av ${g}">${ini(sn||'?')}</div><div class="bwrap">${curChat?.isGroup&&sn?`<div class="sname">${esc(sn)}</div>`:''}<div class="bbl r">${esc(msg.text)}</div><div class="mmeta"><span class="mt">${fmtT(msg.createdAt)}</span><span class="mcd">🔥 ${cdv}</span></div></div>`;
+  }
+  $('msgs').appendChild(row);
+  if(scroll)scrollB();
+  schedDel(msg,row);
+}
+
+function schedDel(msg,rowEl=null){
+  const elapsed=Date.now()-new Date(msg.createdAt).getTime();
+  const rem=DEL_MS-elapsed;
+  if(rem<=0){if(rowEl)rowEl.remove();return;}
+  const iv=setInterval(()=>{
+    if(!rowEl)rowEl=document.querySelector(`[data-mid="${msg._id}"]`);
+    if(!rowEl){clearInterval(iv);return;}
+    const cd_el=rowEl.querySelector('.mcd');
+    if(cd_el)cd_el.textContent=`🔥 ${cd(msg.createdAt)}`;
+  },1000);
+  setTimeout(()=>{
+    clearInterval(iv);
+    if(!rowEl)rowEl=document.querySelector(`[data-mid="${msg._id}"]`);
+    if(rowEl){rowEl.style.transition='opacity .5s,transform .5s';rowEl.style.opacity='0';rowEl.style.transform='scale(0.88)';setTimeout(()=>rowEl.remove(),520);}
+  },rem);
+}
+
+// ─── SEND ───
+function send(){
+  const t=$('mi').value.trim();
+  if(!t)return;
+  if(!curChat)return toast('Select a chat first','e');
+  socket.emit('send_message',{chatId:curChat._id,text:t});
+  $('mi').value='';
+  $('mi').style.height='auto';
+}
+function mkd(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}}
+function mtyp(){
+  const m=$('mi');m.style.height='auto';m.style.height=Math.min(m.scrollHeight,120)+'px';
+  if(socket&&curChat)socket.emit('typing',{chatId:curChat._id,name:me});
+}
+
+// ─── CREATE GROUP ───
+function openCreate(){mshow('mCreate');}
+async function doCreate(){
+  const name=$('gName').value.trim();
+  if(!name)return toast('Enter group name','e');
+  try{
+    const r=await fetch(`${API}/create-group`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,userId})});
+    const chat=await r.json();
+    lastCode=chat.groupCode;
+    addChat(chat,true);
+    mhide();mshow('mCode');
+    $('codeBox').textContent=chat.groupCode;
+    $('gName').value='';
+    toast('Group created! 🎉','s');
+  }catch(e){toast('Failed to create group','e');}
+}
+function copyCode(){navigator.clipboard.writeText(lastCode).then(()=>toast('Code copied! 📋','s'));}
+
+// ─── JOIN GROUP ───
+function openJoin(){mshow('mJoin');}
+async function doJoin(){
+  const code=$('jCode').value.trim();
+  if(!code)return toast('Enter group code','e');
+  try{
+    const r=await fetch(`${API}/join-group`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,userId})});
+    const chat=await r.json();
+    if(!chat._id)return toast(chat.message||'Group not found','e');
+    addChat(chat,true);mhide();
+    $('jCode').value='';
+    toast(`Joined "${chat.name}"! 🎊`,'s');
+  }catch(e){toast('Failed to join','e');}
+}
+
+// ─── NEW DM ───
+function openDM(){mshow('mDM');}
+async function doDM(){
+  const phone=$('dmPhone').value.trim();
+  if(!phone)return toast('Enter phone number','e');
+  try{
+    const r=await fetch(`${API}/start-dm`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({myId:userId,phone})});
+    const d=await r.json();
+    if(!d.chat)return toast(d.message||'User not found','e');
+    const chat=d.chat;
+    chat._oName=d.otherName;chat._otherId=d.otherId;
+    addChat(chat,true);mhide();
+    $('dmPhone').value='';
+    toast(`Chat with ${d.otherName} started!`,'s');
+  }catch(e){toast('Failed to start DM','e');}
+}
+
+// ─── INFO ───
+function showInfo(){
+  if(!curChat)return;
+  const c=curChat;
+  $('infT').textContent=c.isGroup?`👥 ${c.name}`:`💬 ${c._oName||'DM'}`;
+  $('infB').innerHTML=c.isGroup
+    ?`<b>Invite Code:</b> <span style="color:#c4b5fd;font-family:'Syne',sans-serif;font-size:18px;font-weight:800;">${c.groupCode}</span><br><b>Members:</b> ${(c.members||[]).length}<br><br><span style="color:#a78bfa;">Share code <b>${c.groupCode}</b> to invite friends!</span>`
+    :`<b>Type:</b> Direct Message<br><b>Auto-delete:</b> 10 minutes after sending`;
+  mshow('mInfo');
+}
+
+// ─── MODAL ───
+function mshow(id){document.querySelectorAll('.modal').forEach(m=>m.classList.add('hidden'));$(id).classList.remove('hidden');$('ov').classList.add('open');}
+function mhide(){$('ov').classList.remove('open');}
+function mclose(e){if(e.target.id==='ov')mhide();}
+</script>
 </body>
 </html>
